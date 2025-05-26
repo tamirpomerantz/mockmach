@@ -1,0 +1,20 @@
+{
+  "name": "mockmach",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "vite": "^6.3.5"
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0"
+  }
+}

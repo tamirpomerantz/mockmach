@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MockMach - Image Mockup Tool</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <div class="top-bar">
+            <div class="action-buttons">
+                <button id="addImageButton" class="icon-button" title="Add Image">
+                    <span class="material-icons">add_photo_alternate</span>
+                </button>
+                <div class="blend-mode-container">
+                    <button id="blendModeButton" class="icon-button" title="Blend Mode">
+                        <span class="material-icons">water_drop</span>
+                    </button>
+                    <div class="blend-mode-dropdown">
+                        <div class="blend-mode-option" data-mode="source-over">Normal</div>
+                        <div class="blend-mode-option" data-mode="multiply">Multiply</div>
+                        <div class="blend-mode-option" data-mode="screen">Screen</div>
+                        <div class="blend-mode-option" data-mode="overlay">Overlay</div>
+                        <div class="blend-mode-option" data-mode="lighten">Lighten</div>
+                    </div>
+                </div>
+                <button id="copyButton" class="icon-button" title="Copy to Clipboard">
+                    <span class="material-icons">content_copy</span>
+                </button>
+                <button id="downloadButton" class="icon-button" title="Download Result">
+                    <span class="material-icons">download</span>
+                </button>
+            </div>
+        </div>
+        <div class="sidebar">
+            <div class="mockup-gallery" id="mockupGallery">
+                <!-- Mockups will be loaded here dynamically -->
+            </div>
+        </div>
+        
+        <main class="main-content">
+            <div class="canvas-container">
+                <canvas id="mainCanvas"></canvas>
+            </div>
+        </main>
+    </div>
+    <script type="module" src="app.js"></script>
+</body>
+</html> 
