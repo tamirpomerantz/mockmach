@@ -58,37 +58,96 @@ class MockupEditor {
 
         const gallery = document.getElementById('mockupGallery');
         
-        this.mockupPaths.forEach((path, index) => {
-            const thumbnail = document.createElement('div');
-            thumbnail.className = 'mockup-thumbnail';
-            
-            const img = document.createElement('img');
-            img.src = path;
-            img.alt = `Mockup ${index + 1}`;
-            
-            thumbnail.appendChild(img);
-            gallery.appendChild(thumbnail);
+        // Add the upload tile first
+        const uploadTile = document.createElement('div');
+        uploadTile.className = 'mockup-thumbnail upload-tile';
+        uploadTile.innerHTML = '<span class="material-icons">add</span>';
+        uploadTile.title = 'Upload custom background';
+        
+        // Create hidden file input
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.style.display = 'none';
+        document.body.appendChild(fileInput);
 
-            // Add click handler
-            thumbnail.addEventListener('click', () => {
-                // Remove selected class from all thumbnails
-                document.querySelectorAll('.mockup-thumbnail').forEach(thumb => {
-                    thumb.classList.remove('selected');
-                });
-                
-                // Add selected class to clicked thumbnail
-                thumbnail.classList.add('selected');
-                
-                // Load the background image
-                this.loadBackgroundImage(path);
-            });
+        // Handle file selection
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                try {
+                    // Create object URL for the file
+                    const objectUrl = URL.createObjectURL(file);
+                    
+                    // Add the new image path to the beginning of the array (after upload tile)
+                    this.mockupPaths.unshift(objectUrl);
+                    
+                    // Create and insert new thumbnail after upload tile
+                    const newThumbnail = this.createThumbnail(objectUrl, 0);
+                    gallery.insertBefore(newThumbnail, gallery.children[1]);
+                    
+                    // Select the new image
+                    this.loadBackgroundImage(objectUrl);
+                    
+                    // Update selected state
+                    document.querySelectorAll('.mockup-thumbnail').forEach(thumb => {
+                        thumb.classList.remove('selected');
+                    });
+                    newThumbnail.classList.add('selected');
+                } catch (error) {
+                    console.error('Error loading custom background:', error);
+                    alert('Failed to load the image. Please try another one.');
+                }
+            }
+            // Reset file input for future use
+            fileInput.value = '';
+        });
+
+        // Add click handler for upload tile
+        uploadTile.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        gallery.appendChild(uploadTile);
+
+        // Add the rest of the mockups
+        this.mockupPaths.forEach((path, index) => {
+            const thumbnail = this.createThumbnail(path, index);
+            gallery.appendChild(thumbnail);
         });
 
         // Load the first mockup by default
         if (this.mockupPaths.length > 0) {
             this.loadBackgroundImage(this.mockupPaths[0]);
-            gallery.firstElementChild?.classList.add('selected');
+            gallery.children[1]?.classList.add('selected');
         }
+    }
+
+    createThumbnail(path, index) {
+        const thumbnail = document.createElement('div');
+        thumbnail.className = 'mockup-thumbnail';
+        
+        const img = document.createElement('img');
+        img.src = path;
+        img.alt = `Mockup ${index + 1}`;
+        
+        thumbnail.appendChild(img);
+
+        // Add click handler
+        thumbnail.addEventListener('click', () => {
+            // Remove selected class from all thumbnails
+            document.querySelectorAll('.mockup-thumbnail').forEach(thumb => {
+                thumb.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked thumbnail
+            thumbnail.classList.add('selected');
+            
+            // Load the background image
+            this.loadBackgroundImage(path);
+        });
+
+        return thumbnail;
     }
 
     async loadBackgroundImage(src) {
