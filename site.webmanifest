@@ -1,1 +1,9 @@
- 
+{
+    "name": "Mockup Tool",
+    "short_name": "Mockup",
+    "icons": [],
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#ffffff"
+} 

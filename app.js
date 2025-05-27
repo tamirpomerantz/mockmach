@@ -1,4 +1,6 @@
 import ImageTransformer from './ImageTransformer.js';
+import MockupDetector from './MockupDetector.js';
+import MockupAnimator from './MockupAnimator.js';
 
 class MockupEditor {
     constructor() {
@@ -9,8 +11,10 @@ class MockupEditor {
         this.selectedPoint = null;
         this.selectedLayer = null;
         this.isDragging = false;
+        this.lastMousePos = null;
         this.mockupPaths = [];
         this.imageTransformer = new ImageTransformer(this.ctx);
+        this.mockupDetector = new MockupDetector();
 
         // Set initial canvas size
         this.canvas.width = 1000;
@@ -87,21 +91,23 @@ class MockupEditor {
         }
     }
 
-    loadBackgroundImage(src) {
+    async loadBackgroundImage(src) {
         const img = new Image();
-        img.onload = () => {
-            // Store current blend mode
-            const currentBlendMode = this.ctx.globalCompositeOperation;
-            
-            this.backgroundImage = img;
-            this.canvas.width = img.width;
-            this.canvas.height = img.height;
-            
-            // Reapply blend mode before rendering
-            this.ctx.globalCompositeOperation = currentBlendMode;
-            this.render();
-        };
-        img.src = src;
+        await new Promise(resolve => {
+            img.onload = resolve;
+            img.src = src;
+        });
+
+        // Store current blend mode
+        const currentBlendMode = this.ctx.globalCompositeOperation;
+        
+        this.backgroundImage = img;
+        this.canvas.width = img.width;
+        this.canvas.height = img.height;
+        
+        // Reapply blend mode before rendering
+        this.ctx.globalCompositeOperation = currentBlendMode;
+        this.render();
     }
 
     setupEventListeners() {
@@ -112,6 +118,65 @@ class MockupEditor {
             input.accept = 'image/*';
             input.onchange = (e) => this.loadScreenImage(e);
             input.click();
+        });
+
+        // Magic Fit button handler
+        document.getElementById('magicFitButton').addEventListener('click', async () => {
+            if (!this.backgroundImage) {
+                // Show error feedback if no background image
+                const message = document.createElement('div');
+                message.className = 'error-message';
+                message.textContent = 'Please select a background mockup first';
+                document.body.appendChild(message);
+                setTimeout(() => message.remove(), 3000);
+                return;
+            }
+
+            if (this.selectedLayer === null || !this.screenLayers[this.selectedLayer]) {
+                // Show error feedback if no image is selected
+                const message = document.createElement('div');
+                message.className = 'error-message';
+                message.textContent = 'Please add and select a screen image first';
+                document.body.appendChild(message);
+                setTimeout(() => message.remove(), 3000);
+                return;
+            }
+
+            const magicButton = document.getElementById('magicFitButton');
+            
+            try {
+                // Enable debug mode temporarily
+                this.mockupDetector.debugMode = true;
+
+                // Set current corners from the selected layer
+                const currentLayer = this.screenLayers[this.selectedLayer];
+                this.mockupDetector.setCurrentCorners(currentLayer.cornerPoints);
+
+                const mockupCorners = await this.mockupDetector.detectMockupArea(this.backgroundImage);
+                
+                // If detection succeeded, animate to the detected area
+                await this.animateToMockupArea(currentLayer, mockupCorners);
+                
+                // Visual feedback for success
+                magicButton.classList.add('success');
+                setTimeout(() => magicButton.classList.remove('success'), 1000);
+            } catch (error) {
+                console.warn('Could not detect mockup area:', error);
+                
+                // Show error message to user
+                const message = document.createElement('div');
+                message.className = 'error-message';
+                message.textContent = 'Could not detect mockup area. Try adjusting the image contrast or selecting a different mockup.';
+                document.body.appendChild(message);
+                setTimeout(() => message.remove(), 3000);
+                
+                // Visual feedback for failure
+                magicButton.classList.add('error');
+                setTimeout(() => magicButton.classList.remove('error'), 1000);
+            } finally {
+                // Disable debug mode
+                this.mockupDetector.debugMode = false;
+            }
         });
 
         // Blend mode options handler
@@ -225,24 +290,30 @@ class MockupEditor {
         }
     }
 
-    processScreenImageFile(file) {
+    async processScreenImageFile(file) {
         if (!file) return;
         
         const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
+        await new Promise(resolve => {
+            reader.onload = async (e) => {
+                const img = new Image();
+                await new Promise(imgResolve => {
+                    img.onload = imgResolve;
+                    img.src = e.target.result;
+                });
+
                 const newLayer = {
                     image: img,
                     cornerPoints: this.imageTransformer.calculateInitialCornerPoints(img, this.canvas),
                     blendMode: 'source-over'
                 };
                 this.screenLayers.push(newLayer);
+                this.selectedLayer = this.screenLayers.length - 1;
                 this.render();
+                resolve();
             };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+            reader.readAsDataURL(file);
+        });
     }
 
     loadScreenImage(event) {
@@ -267,10 +338,11 @@ class MockupEditor {
         const MARKER_SIZE = 24;
         const HALF_SIZE = MARKER_SIZE / 2;
         
-        // Check each layer's corner points
-        for (let i = 0; i < this.screenLayers.length; i++) {
+        // Check each layer's corner points first
+        for (let i = this.screenLayers.length - 1; i >= 0; i--) {
             const layer = this.screenLayers[i];
             
+            // Check corner points first
             for (let j = 0; j < layer.cornerPoints.length; j++) {
                 const point = layer.cornerPoints[j];
                 if (mousePos.x >= point.x - HALF_SIZE && 
@@ -280,32 +352,69 @@ class MockupEditor {
                     this.selectedLayer = i;
                     this.selectedPoint = j;
                     this.isDragging = true;
-                    
-                    // Update blend mode select to match the selected layer
-                    const blendModeSelect = document.getElementById('blendMode');
-                    blendModeSelect.value = layer.blendMode;
-                    
+                    this.lastMousePos = mousePos;
                     this.render();
                     return;
                 }
+            }
+
+            // If no corner point is clicked, check if clicked inside the layer
+            if (this.isPointInLayer(mousePos, layer)) {
+                this.selectedLayer = i;
+                this.selectedPoint = null; // null indicates we're dragging the whole layer
+                this.isDragging = true;
+                this.lastMousePos = mousePos;
+                this.render();
+                return;
             }
         }
 
         this.selectedLayer = null;
         this.selectedPoint = null;
+        this.isDragging = false;
         this.render();
     }
 
     handleMouseMove(event) {
-        if (this.isDragging && this.selectedLayer !== null && this.selectedPoint !== null) {
-            const mousePos = this.getMousePos(event);
-            this.screenLayers[this.selectedLayer].cornerPoints[this.selectedPoint] = mousePos;
-            this.render();
+        if (!this.isDragging || this.selectedLayer === null) return;
+
+        const mousePos = this.getMousePos(event);
+        const layer = this.screenLayers[this.selectedLayer];
+
+        if (this.selectedPoint !== null) {
+            // Dragging a corner point
+            layer.cornerPoints[this.selectedPoint] = mousePos;
+        } else {
+            // Dragging the entire layer
+            const dx = mousePos.x - this.lastMousePos.x;
+            const dy = mousePos.y - this.lastMousePos.y;
+            
+            // Move all corner points
+            layer.cornerPoints.forEach(point => {
+                point.x += dx;
+                point.y += dy;
+            });
         }
+
+        this.lastMousePos = mousePos;
+        this.render();
     }
 
     handleMouseUp() {
         this.isDragging = false;
+        this.lastMousePos = null;
+    }
+
+    isPointInLayer(point, layer) {
+        // Get the bounding box of the layer
+        const points = layer.cornerPoints;
+        const minX = Math.min(...points.map(p => p.x));
+        const maxX = Math.max(...points.map(p => p.x));
+        const minY = Math.min(...points.map(p => p.y));
+        const maxY = Math.max(...points.map(p => p.y));
+
+        // Check if point is within the bounding box
+        return point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY;
     }
 
     drawCornerPoints() {
@@ -485,6 +594,19 @@ class MockupEditor {
             console.error('Failed to copy:', err);
             alert('Failed to copy image to clipboard. Your browser may not support this feature.');
         }
+    }
+
+    async animateToMockupArea(layer, targetCorners) {
+        // Animate the corner points to the target positions
+        await MockupAnimator.animateCorners(
+            layer.cornerPoints,
+            targetCorners,
+            1000, // 1 second duration
+            (points) => {
+                layer.cornerPoints = points;
+                this.render();
+            }
+        );
     }
 }
 

@@ -14,14 +14,16 @@
     <meta property="og:url" content="https://tamirpomerantz.github.io/mockmach/">
     <meta property="og:title" content="Mocka - Browser-based Mockup Tool">
     <meta property="og:description" content="Transform and overlay images directly in your browser. Create beautiful mockups with an intuitive interface and real-time preview.">
-    <meta property="og:image" content="https://tamirpomerantz.github.io/mockmach/icon.png">
+    <meta property="og:image" content="https://tamirpomerantz.github.io/mockmach/social-preview.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://tamirpomerantz.github.io/mockmach/">
     <meta property="twitter:title" content="Mocka - Browser-based Mockup Tool">
     <meta property="twitter:description" content="Transform and overlay images directly in your browser. Create beautiful mockups with an intuitive interface and real-time preview.">
-    <meta property="twitter:image" content="https://tamirpomerantz.github.io/mockmach/icon.png">
+    <meta property="twitter:image" content="https://tamirpomerantz.github.io/mockmach/social-preview.png">
 
     <!-- Favicon and Manifest -->
     <link rel="icon" type="image/png" href="icon.png">
@@ -33,11 +35,19 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div id="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading OpenCV...</div>
+    </div>
+
     <div class="app-container">
         <div class="top-bar">
             <div class="action-buttons">
                 <button id="addImageButton" class="icon-button" title="Add Image">
                     <span class="material-icons">add_photo_alternate</span>
+                </button>
+                <button id="magicFitButton" class="icon-button" title="Auto-fit to Mockup">
+                    <span class="material-icons">auto_fix_high</span>
                 </button>
                 <div class="blend-mode-container">
                     <button id="blendModeButton" class="icon-button" title="Blend Mode">
@@ -71,6 +81,20 @@
             </div>
         </main>
     </div>
+
+    <!-- Load OpenCV.js -->
+    <script>
+        // Show loading indicator
+        const loadingOverlay = document.getElementById('loading');
+        
+        function onOpenCvReady() {
+            console.log('OpenCV.js is ready');
+            loadingOverlay.style.display = 'none';
+        }
+    </script>
+    <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady()"></script>
+    
+    <!-- Load our app after OpenCV is ready -->
     <script type="module" src="app.js"></script>
 </body>
 </html> 
