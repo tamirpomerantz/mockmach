@@ -53,7 +53,14 @@ class MockupEditor {
             'mockups/visualelectric-1748261544027.png',
             'mockups/visualelectric-1748261549724.png',
             'mockups/visualelectric-1748261554937.png',
-            'mockups/visualelectric-1748261564086.png'
+            'mockups/visualelectric-1748261564086.png',
+            'mockups/visualelectric-1748261570800.png',
+            'mockups/visualelectric-1748351514522.png',
+            'mockups/visualelectric-1748351527559.png',
+            'mockups/visualelectric-1748351541046.png',
+            'mockups/visualelectric-1748351564399.png',
+            'mockups/visualelectric-1748351577919.png',
+            'mockups/visualelectric-1748351585573.png',
         ];
 
         const gallery = document.getElementById('mockupGallery');
